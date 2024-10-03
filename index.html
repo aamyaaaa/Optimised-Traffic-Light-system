@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Traffic Control System</title>
+    <style>
+        /* Styles for the traffic lights */
+        .intersection {
+            margin: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            display: inline-block;
+            vertical-align: top;
+            width: 300px;
+        }
+
+        .intersection h2 {
+            text-align: center;
+        }
+
+        .traffic-light-container {
+            margin-bottom: 20px;
+        }
+
+        .traffic-light {
+            width: 50px;
+            height: 150px;
+            background-color: #333;
+            border-radius: 10px;
+            padding: 10px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .light {
+            width: 30px;
+            height: 30px;
+            background-color: grey;
+            border-radius: 50%;
+            margin: 10px auto;
+        }
+
+        .light.red {
+            background-color: red;
+        }
+
+        .light.green {
+            background-color: green;
+        }
+
+        .sensor-data {
+            margin-top: 10px;
+            text-align: left;
+        }
+
+        .sensor-data p {
+            margin: 5px 0;
+        }
+
+        .car-icon, .pedestrian-icon {
+            font-size: 24px;
+            margin: 2px;
+            display: inline-block;
+        }
+
+        #legend {
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-bottom: 20px;
+            width: 200px;
+        }
+
+        .label {
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Traffic Control System</h1>
+
+    <!-- Legend -->
+    <div id="legend">
+        <h3>Legend</h3>
+        <p><span style="color: red;">●</span> Red Light</p>
+        <p><span style="color: green;">●</span> Green Light</p>
+        <p>🚗 North-South Car</p>
+        <p>🚙 East-West Car</p>
+        <p>🚶 Pedestrian</p>
+    </div>
+
+    <div id="intersections-container"></div>
+
+    <script>
+        const intersectionsContainer = document.getElementById('intersections-container');
+        const intersections = {}; // Store intersection elements
+
+        // Function to create intersection elements
+        function createIntersection(intersectionId) {
+            const intersectionDiv = document.createElement('div');
+            intersectionDiv.className = 'intersection';
+            intersectionDiv.id = `intersection-${intersectionId}`;
+
+            const title = document.createElement('h2');
+            title.textContent = `Intersection ${intersectionId}`;
+            intersectionDiv.appendChild(title);
+
+            // North-South Traffic Light (Cars)
+            const nsCarContainer = document.createElement('div');
+            nsCarContainer.className = 'traffic-light-container';
+            nsCarContainer.innerHTML = `
+                <div class="label">North-South Cars</div>
+                <div class="traffic-light">
+                    <div class="light" id="ns-car-light-${intersectionId}"></div>
+                </div>`;
+            intersectionDiv.appendChild(nsCarContainer);
+
+            // East-West Traffic Light (Cars)
+            const ewCarContainer = document.createElement('div');
+            ewCarContainer.className = 'traffic-light-container';
+            ewCarContainer.innerHTML = `
+                <div class="label">East-West Cars</div>
+                <div class="traffic-light">
+                    <div class="light" id="ew-car-light-${intersectionId}"></div>
+                </div>`;
+            intersectionDiv.appendChild(ewCarContainer);
+
+            // North-South Pedestrian Light
+            const nsPedestrianContainer = document.createElement('div');
+            nsPedestrianContainer.className = 'traffic-light-container';
+            nsPedestrianContainer.innerHTML = `
+                <div class="label">North-South Pedestrians</div>
+                <div class="traffic-light">
+                    <div class="light" id="ns-pedestrian-light-${intersectionId}"></div>
+                </div>`;
+            intersectionDiv.appendChild(nsPedestrianContainer);
+
+            // East-West Pedestrian Light
+            const ewPedestrianContainer = document.createElement('div');
+            ewPedestrianContainer.className = 'traffic-light-container';
+            ewPedestrianContainer.innerHTML = `
+                <div class="label">East-West Pedestrians</div>
+                <div class="traffic-light">
+                    <div class="light" id="ew-pedestrian-light-${intersectionId}"></div>
+                </div>`;
+            intersectionDiv.appendChild(ewPedestrianContainer);
+
+            // Sensor Data Display
+            const sensorDataDiv = document.createElement('div');
+            sensorDataDiv.className = 'sensor-data';
+            sensorDataDiv.id = `sensor-data-${intersectionId}`;
+            sensorDataDiv.innerHTML = `
+                <p>North-South Cars: <span id="ns-cars-${intersectionId}">0</span></p>
+                <p>North-South Pedestrians: <span id="ns-pedestrians-${intersectionId}">0</span></p>
+                <p>East-West Cars: <span id="ew-cars-${intersectionId}">0</span></p>
+                <p>East-West Pedestrians: <span id="ew-pedestrians-${intersectionId}">0</span></p>
+            `;
+            intersectionDiv.appendChild(sensorDataDiv);
+
+            intersectionsContainer.appendChild(intersectionDiv);
+            intersections[intersectionId] = intersectionDiv;
+        }
+
+        // Function to update the traffic lights and sensor data
+        function updateTrafficLights(intersectionId, state, sensorData, changeTime) {
+            let intersectionDiv = intersections[intersectionId];
+            if (!intersectionDiv) {
+                createIntersection(intersectionId);
+                intersectionDiv = intersections[intersectionId];
+            }
+
+            const nsCarLight = intersectionDiv.querySelector(`#ns-car-light-${intersectionId}`);
+            const ewCarLight = intersectionDiv.querySelector(`#ew-car-light-${intersectionId}`);
+            const nsPedestrianLight = intersectionDiv.querySelector(`#ns-pedestrian-light-${intersectionId}`);
+            const ewPedestrianLight = intersectionDiv.querySelector(`#ew-pedestrian-light-${intersectionId}`);
+
+            // Reset lights
+            nsCarLight.className = 'light';
+            ewCarLight.className = 'light';
+            nsPedestrianLight.className = 'light';
+            ewPedestrianLight.className = 'light';
+
+            // Update car lights
+            if (state.north_south === 'GREEN') {
+                nsCarLight.classList.add('green');
+            } else {
+                nsCarLight.classList.add('red');
+            }
+
+            if (state.east_west === 'GREEN') {
+                ewCarLight.classList.add('green');
+            } else {
+                ewCarLight.classList.add('red');
+            }
+
+            // Update pedestrian lights
+            if (state.pedestrians_ns === 'GREEN') {
+                nsPedestrianLight.classList.add('green');
+            } else {
+                nsPedestrianLight.classList.add('red');
+            }
+
+            if (state.pedestrians_ew === 'GREEN') {
+                ewPedestrianLight.classList.add('green');
+            } else {
+                ewPedestrianLight.classList.add('red');
+            }
+
+            // Update sensor data
+            intersectionDiv.querySelector(`#ns-cars-${intersectionId}`).textContent = sensorData.north_south.cars;
+            intersectionDiv.querySelector(`#ns-pedestrians-${intersectionId}`).textContent = sensorData.north_south.pedestrians;
+            intersectionDiv.querySelector(`#ew-cars-${intersectionId}`).textContent = sensorData.east_west.cars;
+            intersectionDiv.querySelector(`#ew-pedestrians-${intersectionId}`).textContent = sensorData.east_west.pedestrians;
+        }
+
+        // WebSocket to receive real-time updates
+        const ws = new WebSocket('ws://localhost:5001'); // Use port 5001
+
+        ws.onopen = () => {
+            console.log('WebSocket connection opened');
+        };
+
+        ws.onmessage = (event) => {
+            const message = JSON.parse(event.data);
+            const intersectionId = message.intersection_id;
+            const state = message.trafficLightState;
+            const sensorData = message.sensorData;
+            const changeTime = message.changeTime;
+            updateTrafficLights(intersectionId, state, sensorData, changeTime);
+        };
+
+        ws.onclose = () => {
+            console.log('WebSocket connection closed');
+        };
+
+        ws.onerror = (error) => {
+            console.error('WebSocket error:', error);
+        };
+    </script>
+</body>
+</html>
